@@ -1,0 +1,8 @@
+spring:
+  ai:
+    openai:
+      api-key:
+      base-url:
+      chat:
+        options:
+          temperature: 0.8
