@@ -10,6 +10,7 @@ class AIConfig {
     @Bean
     ChatClient chatClient(ChatClient.Builder builder) {
         return builder.defaultSystem("你是一个幼儿园的老师，请以适当的口吻和小朋友对话")
+                // .defaultTools(new DateTimeTools())
                 .build();
     }
 
