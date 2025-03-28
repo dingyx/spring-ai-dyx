@@ -41,72 +41,68 @@ public class AIController {
 //        this.chatClient = chatClientBuilder.build();
 //    }
 
+    // 注入 ChatClient
     @Autowired
     private ChatClient chatClient;
 
+    // 注入 ChatModel
     @Autowired
     private ChatModel chatModel;
 
+    // 注入 OpenAiImageModel
     @Autowired
     private OpenAiImageModel openAiImageModel;
 
+    // 注入 OpenAiAudioSpeechModel
     @Autowired
     private OpenAiAudioSpeechModel openAiAudioSpeechModel;
 
+    // 注入 OpenAiAudioTranscriptionModel
     @Autowired
     private OpenAiAudioTranscriptionModel openAiAudioTranscriptionModel;
 
     @GetMapping("/chat")
     String chat(@RequestParam(value = "message", defaultValue = "讲个笑话") String message) {
-        // prompt 提示词
+        // 使用 ChatClient 进行聊天
         return this.chatClient.prompt()
-                // 用户信息
-                .user(message)
-                // 请求大模型
-                .call()
-                // 返回文本
-                .content();
+                .user(message) // 用户输入信息
+                .call() // 调用大模型
+                .content(); // 返回文本内容
     }
-
 
     @GetMapping(value = "/stream", produces = "text/html;charset=UTF-8")
     Flux<String> stream(@RequestParam(value = "message", defaultValue = "讲个笑话") String message) {
-        // prompt 提示词
+        // 使用 ChatClient 进行流式聊天
         Flux<String> output = chatClient.prompt().user(message)
-                //.stream()
-                .stream().content();
+                .stream().content(); // 流式返回内容
         return output;
     }
 
-
     @GetMapping("/chat/model")
     String chatModel(@RequestParam(value = "message", defaultValue = "讲个笑话") String message) {
-        // prompt 提示词
+        // 使用 ChatModel 进行聊天
         ChatResponse response = chatModel.call(new Prompt(message, OpenAiChatOptions.builder().model("gpt-4o").temperature(0.4).build()));
-        return response.getResult().getOutput().getText();
+        return response.getResult().getOutput().getText(); // 返回聊天结果
     }
-
 
     @GetMapping("/text2Img")
     String text2Img(@RequestParam(value = "message", defaultValue = "画一只兔子") String message) {
+        // 使用 OpenAiImageModel 生成图像
         ImageResponse response = openAiImageModel.call(
                 new ImagePrompt(message,
                         OpenAiImageOptions.builder()
-                                .quality("hd")
+                                .quality("hd") // 图像质量
                                 .withModel(OpenAiImageApi.DEFAULT_IMAGE_MODEL)
-                                // 图片数量
-                                .N(1)
-                                .height(1024)
-                                .width(1024).build())
-
+                                .N(1) // 图片数量
+                                .height(1024) // 图片高度
+                                .width(1024).build()) // 图片宽度
         );
-        return response.getResult().getOutput().getUrl();
+        return response.getResult().getOutput().getUrl(); // 返回图像 URL
     }
-
 
     @GetMapping(value = "/text2Audio")
     public String text2Audio(@RequestParam(value = "message", defaultValue = "Hello 大家好") String message) {
-        // 配置项
+        // 配置语音合成选项
         OpenAiAudioSpeechOptions speechOptions = OpenAiAudioSpeechOptions.builder()
                 .model(OpenAiAudioApi.TtsModel.TTS_1.value)
                 .voice(OpenAiAudioApi.SpeechRequest.Voice.ALLOY)
@@ -119,23 +115,22 @@ public class AIController {
         byte[] output = response.getResult().getOutput();
 
         try {
-            writeByteArrayToMP3File(output, System.getProperty("user.dir"));
+            writeByteArrayToMP3File(output, System.getProperty("user.dir")); // 写入 MP3 文件
         } catch (IOException e) {
-            e.printStackTrace(); // 或记录日志
-            return "音频文件生成失败: " + e.getMessage();
+            e.printStackTrace(); // 打印异常信息
+            return "音频文件生成失败: " + e.getMessage(); // 返回错误信息
         }
 
-        return "音频文件生成成功";
+        return "音频文件生成成功"; // 返回成功信息
     }
 
     @GetMapping(value = "/audio2Text")
     public String audio2Text() {
-
-        // 翻译配置
+        // 配置音频转文本选项
         var transcriptionOptions = OpenAiAudioTranscriptionOptions.builder()
                 .responseFormat(OpenAiAudioApi.TranscriptResponseFormat.TEXT)
                 .temperature(0f)
-                .language("zh")
+                .language("zh") // 语言设置为中文
                 .build();
 
         var audioFile = new ClassPathResource("54723862_tts.mp3");
@@ -143,16 +138,15 @@ public class AIController {
         AudioTranscriptionPrompt transcriptionRequest = new AudioTranscriptionPrompt(audioFile, transcriptionOptions);
         AudioTranscriptionResponse response = openAiAudioTranscriptionModel.call(transcriptionRequest);
 
-        return response.getResult().getOutput();
+        return response.getResult().getOutput(); // 返回转录结果
     }
-
 
     @GetMapping(value = "/multi")
     public String multiModel(@RequestParam(value = "message", defaultValue = "你从图片中获取到了什么信息") String message) {
-
+        // 使用多模型进行处理
         ClassPathResource imgResource = new ClassPathResource("avatar.jpg");
 
-        var userMessage =new UserMessage(message,
+        var userMessage = new UserMessage(message,
                 List.of(new Media(MimeTypeUtils.IMAGE_JPEG, imgResource)));
 
         ChatResponse response = chatModel.call(new Prompt(userMessage,
@@ -160,20 +154,14 @@ public class AIController {
                         .model(OpenAiApi.ChatModel.GPT_4_O)
                         .build()));
 
-        return response.getResult().getOutput().getText();
+        return response.getResult().getOutput().getText(); // 返回处理结果
     }
 
-
-
-
-
-        // byte[] 写入mp3文件
+    // 将 byte[] 写入 MP3 文件
     public static void writeByteArrayToMP3File(byte[] audioBytes, String outputFilePath) throws IOException {
         try (FileOutputStream fos = new FileOutputStream(
                 outputFilePath + FileSystems.getDefault().getSeparator() + new Random().nextInt(99999999) + "_tts.mp3")) {
             fos.write(audioBytes);
         }
     }
-
-
 }
